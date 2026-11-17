@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="manifest.json">
+<title>FRESHLY & PREMIER - POS Cashier</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg-dark: #0c0e13;
+    --bg-panel: #151922;
+    --bg-card: #1c212d;
+    --bg-input: #10131a;
+    --gold-light: #fcf6ba;
+    --gold-main: #d4af37;
+    --gold-dark: #aa771c;
+    --gold-gradient: linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #d4af37 55%, #fbf5b7 80%, #aa771c 100%);
+    --border-gold: rgba(212, 175, 55, 0.35);
+    --border-subtle: #2a303f;
+    --text-main: #f3f4f6;
+    --text-muted: #9ca3af;
+    --success: #10b981;
+    --danger: #ef4444;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+  body { background-color: #07080b; color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+
+  .phone-frame {
+    width: 100%; max-width: 430px; height: 94vh; max-height: 870px;
+    background: var(--bg-dark); display: flex; flex-direction: column; position: relative;
+    overflow: hidden; box-shadow: 0 0 40px rgba(0,0,0,0.9); border: 1px solid var(--border-gold); border-radius: 24px;
+  }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg-dark); }
+  ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+
+  .app-header { background: var(--bg-panel); border-bottom: 1px solid var(--border-gold); padding: 8px 12px; flex-shrink: 0; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .brand-box { display: flex; align-items: center; gap: 8px; }
+  .brand-logo-wrap svg, .brand-logo-wrap img { height: 36px; width: auto; border-radius: 8px; border: 1px solid var(--border-gold); display: block; }
+  .brand-title { font-size: 0.95rem; font-weight: 900; background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 0.5px; }
+  .brand-sub { font-size: 0.58rem; color: var(--text-muted); letter-spacing: 1px; }
+
+  .header-controls { display: flex; align-items: center; gap: 5px; }
+  .selector-pill { display: flex; align-items: center; gap: 3px; background: var(--bg-card); border: 1px solid var(--border-gold); padding: 4px 6px; border-radius: 8px; font-size: 0.72rem; }
+  .selector-pill select { background: transparent; color: var(--gold-light); border: none; font-weight: 700; font-size: 0.72rem; outline: none; cursor: pointer; }
+  .selector-pill select option { background: var(--bg-panel); color: var(--text-main); }
+
+  .main-content { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; position: relative; }
+  .view-section { display: none; flex-direction: column; gap: 8px; height: 100%; flex: 1; }
+  .view-section.active { display: flex; }
+
+  .pos-container { display: flex; flex-direction: column; gap: 8px; height: 100%; flex: 1; overflow: hidden; }
+  .input-field { width: 100%; background: var(--bg-input); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 7px 10px; border-radius: 9px; font-size: 0.82rem; outline: none; }
+  .input-field:focus { border-color: var(--gold-main); }
+
+  .category-strip { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex-shrink: 0; }
+  .cat-chip { background: var(--bg-card); border: 1px solid var(--border-subtle); color: var(--text-main); padding: 5px 11px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; white-space: nowrap; cursor: pointer; }
+  .cat-chip.active { background: var(--gold-gradient); color: #0b0d12; border-color: transparent; }
+
+  .items-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; overflow-y: auto; flex: 1; padding-bottom: 8px; }
+  .item-card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 11px; padding: 7px; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+  .item-card:active { transform: scale(0.97); }
+  .item-card.special-item { border: 1.5px solid var(--gold-main); background: linear-gradient(180deg, rgba(212,175,55,0.14) 0%, var(--bg-card) 100%); }
+  .special-ribbon { position: absolute; top: 5px; inset-inline-start: 5px; background: var(--gold-gradient); color: #000; font-size: 0.6rem; font-weight: 900; padding: 1px 6px; border-radius: 5px; z-index: 2; }
+  .item-thumb { width: 100%; height: 68px; border-radius: 8px; overflow: hidden; background: #10131a; margin-bottom: 5px; }
+  .item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .item-name { font-size: 0.78rem; font-weight: 700; text-align: center; margin-bottom: 4px; line-height: 1.25; }
+  .item-price-tag { text-align: center; font-weight: 900; font-size: 0.82rem; color: var(--gold-main); background: rgba(0,0,0,0.4); padding: 3px 6px; border-radius: 6px; }
+
+  .cart-panel { background: var(--bg-panel); border-top: 1px solid var(--border-gold); border-radius: 14px 14px 0 0; padding: 9px 10px; flex-shrink: 0; }
+  .cart-list { max-height: 75px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+  .cart-empty { text-align: center; color: var(--text-muted); padding: 8px; font-size: 0.78rem; }
+  .cart-row { background: var(--bg-card); border-radius: 8px; padding: 5px 8px; display: flex; align-items: center; justify-content: space-between; font-size: 0.76rem; }
+  .qty-btn { width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-input); color: var(--text-main); font-weight: 900; cursor: pointer; }
+
+  .cart-extras { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 6px; }
+  .cart-extras label { display: block; font-size: 0.62rem; color: var(--text-muted); margin-bottom: 2px; }
+  .cart-extras input { padding: 5px 6px; font-size: 0.75rem; }
+
+  .totals-row { display: flex; justify-content: space-between; align-items: center; font-weight: 900; font-size: 0.92rem; color: var(--gold-main); margin-bottom: 7px; padding-top: 4px; border-top: 1px solid var(--border-subtle); }
+
+  .btn { padding: 8px 10px; border-radius: 10px; font-weight: 800; font-size: 0.78rem; cursor: pointer; border: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+  .btn-gold { background: var(--gold-gradient); color: #0b0d12; width: 100%; }
+  .btn-dark { background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-subtle); }
+  .btn-danger { background: rgba(239, 68, 68, 0.18); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.4); }
+
+  .nav-bar { background: var(--bg-panel); border-top: 1px solid var(--border-gold); display: flex; justify-content: space-around; align-items: center; padding: 8px 4px 12px 4px; flex-shrink: 0; z-index: 100; box-shadow: 0 -4px 15px rgba(0,0,0,0.5); }
+  .nav-btn { background: transparent; color: var(--text-muted); border: none; padding: 4px 6px; border-radius: 8px; font-size: 0.65rem; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .nav-btn.active { color: var(--gold-main); }
+  .nav-btn .icon { font-size: 1.05rem; }
+
+  .panel-box { background: var(--bg-panel); border: 1px solid var(--border-gold); border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.74rem; text-align: right; }
+  .data-table th, .data-table td { padding: 6px; border-bottom: 1px solid var(--border-subtle); }
+  .data-table th { color: var(--gold-light); font-weight: 800; }
+
+  .toast-banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--gold-gradient); color: #0b0d12; padding: 8px 16px; border-radius: 10px; font-weight: 900; font-size: 0.8rem; z-index: 999; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.7); white-space: nowrap; }
+  .toast-banner.show { display: flex; }
+</style>
+</head>
+<body>
+
+  <div class="phone-frame">
+    <div id="toastBanner" class="toast-banner"><span id="toastText">تم التنفيذ بنجاح!</span></div>
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand-box">
+          <div id="headerLogoContainer" class="brand-logo-wrap"></div>
+          <div>
+            <div class="brand-title">FRESHLY &amp; PREMIER</div>
+            <div class="brand-sub">PREMIER BEVERIDGE CO</div>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <div class="selector-pill" title="Language">
+            <span>🌐</span>
+            <select id="langSelect">
+              <option value="ar">🇪🇬 AR</option>
+              <option value="en">🇬🇧 EN</option>
+              <option value="de">🇩🇪 DE</option>
+              <option value="fr">🇫🇷 FR</option>
+              <option value="ru">🇷🇺 RU</option>
+            </select>
+          </div>
+          <div class="selector-pill" title="Currency">
+            <span>💱</span>
+            <select id="currencySelect">
+              <option value="EGP">🇪🇬 EGP</option>
+              <option value="EUR">🇪🇺 EUR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+
+      <!-- 1. POS VIEW -->
+      <section id="view-pos" class="view-section active">
+        <div class="pos-container">
+          <div>
+            <input type="text" id="posSearchInput" class="input-field" data-i18n-placeholder="searchPlaceholder" placeholder="ابحث عن مشروب أو صنف...">
+          </div>
+          <div id="posCategoryStrip" class="category-strip"></div>
+          <div id="posItemsGrid" class="items-grid"></div>
+
+          <!-- Cart Panel -->
+          <div class="cart-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+              <span style="font-size:0.82rem; font-weight:800; color:var(--gold-main);" data-i18n="cartTitle">الفاتورة الحالية</span>
+              <input type="text" id="customerNameInput" class="input-field" style="max-width:135px; padding:4px 8px; font-size:0.74rem;" data-i18n-placeholder="customerPlaceholder" placeholder="العميل / الطاولة">
+            </div>
+
+            <div id="cartItemsList" class="cart-list"></div>
+
+            <div class="cart-extras">
+              <div>
+                <label data-i18n="discountLabel">الخصم (%)</label>
+                <input type="number" id="discountInput" class="input-field" min="0" max="100" value="0">
+              </div>
+              <div>
+                <label style="display:flex; justify-content:space-between;">
+                  <span data-i18n="taxLabel">الضريبة (%)</span>
+                  <span style="color:var(--gold-main); cursor:pointer;"><input type="checkbox" id="hideTaxCheckbox"> 👁️</span>
+                </label>
+                <input type="number" id="taxInput" class="input-field" min="0" max="100" value="0">
+              </div>
+              <div>
+                <label data-i18n="saleDateLabel">التاريخ</label>
+                <input type="date" id="saleDateInput" class="input-field">
+              </div>
+            </div>
+
+            <div class="totals-row">
+              <span data-i18n="grandTotalLabel">الإجمالي النهائي:</span>
+              <span id="grandTotalDisplay">0 EGP</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:6px;">
+              <button id="holdOrderBtn" class="btn btn-dark">⏳ <span data-i18n="holdBtn">تعليق</span></button>
+              <button id="checkoutBtn" class="btn btn-gold">✅ <span data-i18n="payBtn">إتمام ودفع</span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. PENDING ORDERS VIEW -->
+      <section id="view-pending" class="view-section">
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;" data-i18n="pendingTitle">الأوردرات المعلقة والواردة من المنيو</h3>
+        <div id="pendingOrdersList" style="display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1;"></div>
+      </section>
+
+      <!-- 3. REPORTS & CUSTODY VIEW -->
+      <section id="view-reports" class="view-section">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <h3 style="font-size:0.92rem; color:var(--gold-main);" data-i18n="reportsTitle">التقارير اليومية والعهدة</h3>
+          <div style="display:flex; gap:5px; align-items:center;">
+            <select id="reportPeriodSelect" class="input-field" style="padding:4px 8px; font-size:0.7rem; font-weight:700;">
+              <option value="all" data-i18n="periodAll">📅 كل الأيام</option>
+              <option value="today" data-i18n="periodToday">⭐ اليوم فقط</option>
+              <option value="7days" data-i18n="period7Days">⚡ آخر 7 أيام</option>
+              <option value="30days" data-i18n="period30Days">📊 آخر 30 يوم</option>
+              <option value="custom" data-i18n="periodCustom">🎯 مخصص (من - إلى)</option>
+            </select>
+            <button id="printReportBtn" class="btn btn-gold no-print" style="padding:4px 8px; font-size:0.7rem;">🖨️</button>
+          </div>
+        </div>
+
+        <!-- Custom Date Range Box (Hidden by default, shown when custom period selected) -->
+        <div id="customDateRangeBox" class="panel-box" style="display:none; grid-template-columns: 1fr 1fr; gap:6px; padding:6px 10px;">
+          <div>
+            <label style="font-size:0.6rem; color:var(--text-muted);" data-i18n="fromDateLabel">من تاريخ</label>
+            <input type="date" id="customStartDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
+          </div>
+          <div>
+            <label style="font-size:0.6rem; color:var(--text-muted);" data-i18n="toDateLabel">إلى تاريخ</label>
+            <input type="date" id="customEndDate" class="input-field" style="padding:4px 6px; font-size:0.75rem;">
+          </div>
+        </div>
+
+        <!-- Exchange Rate Input Box -->
+        <div class="panel-box" style="display:flex; align-items:center; justify-content:space-between; padding:8px 10px;">
+          <span style="font-size:0.72rem; font-weight:800; color:var(--gold-light);" data-i18n="exchangeRateLabel">سعر صرف اليورو (EUR to EGP):</span>
+          <input type="number" id="exchangeRateInput" class="input-field" value="55" step="0.1" style="max-width:80px; text-align:center; font-weight:850; color:var(--gold-main);">
+        </div>
+
+        <div class="panel-box">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;" data-i18n="custodyBoxTitle">إدارة العهدة اليومية للدرج</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:flex-end;">
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);" data-i18n="custodyDate">التاريخ</label>
+              <input type="date" id="custodyDateInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);" data-i18n="custodyAmount">المبلغ (EGP)</label>
+              <input type="number" id="custodyAmountInput" class="input-field">
+            </div>
+            <button id="saveCustodyBtn" class="btn btn-gold" style="padding:7px 10px;" data-i18n="saveBtn">حفظ</button>
+          </div>
+        </div>
+
+        <!-- Expenses Management Box -->
+        <div class="panel-box">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;" data-i18n="expensesBoxTitle">تسجيل المصروفات اليومية</h4>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1.2fr auto; gap:5px; align-items:flex-end;">
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);" data-i18n="expenseDate">التاريخ</label>
+              <input type="date" id="expenseDateInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);" data-i18n="expenseAmount">المبلغ (EGP)</label>
+              <input type="number" id="expenseAmountInput" class="input-field">
+            </div>
+            <div>
+              <label style="font-size:0.62rem; color:var(--text-muted);" data-i18n="expenseDesc">البيان / السبب</label>
+              <input type="text" id="expenseDescInput" class="input-field" placeholder="مثال: مشتريات ثلج...">
+            </div>
+            <button id="addExpenseBtn" class="btn btn-gold" style="padding:7px 10px;" data-i18n="addExpenseBtn">إضافة</button>
+          </div>
+        </div>
+
+        <div class="panel-box" style="flex:1; overflow-y:auto;">
+          <h4 style="font-size:0.78rem; color:var(--gold-light); margin-bottom:6px;" data-i18n="dailyBreakdownTitle">ملخص الأيام المالي (كل يوم على حدة)</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="thDate">التاريخ</th>
+                <th data-i18n="thOrders">الطلبات</th>
+                <th data-i18n="thCustody">العهدة</th>
+                <th data-i18n="thExpenses">المصروفات</th>
+                <th data-i18n="thSalesEgp">إجمالي المبيعات (EGP)</th>
+              </tr>
+            </thead>
+            <tbody id="dailyBreakdownBody"></tbody>
+            <tfoot id="dailyBreakdownFoot"></tfoot>
+          </table>
+        </div>
+
+        <div class="panel-box" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:8px; text-align:center;">
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);" data-i18n="statCustody">إجمالي العهدة</div>
+            <div id="statTotalCustodyVal" style="font-size:0.95rem; font-weight:900; color:var(--gold-main);">0 EGP</div>
+          </div>
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);" data-i18n="statExpenses">إجمالي المصروفات</div>
+            <div id="statTotalExpensesVal" style="font-size:0.95rem; font-weight:900; color:var(--danger);">0 EGP</div>
+          </div>
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);" data-i18n="statSalesEgp">إجمالي المبيعات</div>
+            <div id="statTotalSalesEgpVal" style="font-size:0.95rem; font-weight:900; color:var(--gold-main);">0 EGP</div>
+          </div>
+          <div>
+            <div style="font-size:0.65rem; color:var(--text-muted);" data-i18n="statNetDrawer">صافي الدرج والخزينة</div>
+            <div id="statNetDrawerVal" style="font-size:0.95rem; font-weight:900; color:var(--success);">0 EGP</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. SETTINGS VIEW -->
+      <section id="view-settings" class="view-section">
+        <h3 style="font-size:0.92rem; color:var(--gold-main); margin-bottom:6px;" data-i18n="settingsTitle">إعدادات النظام والشركة</h3>
+        <div class="panel-box" style="display:flex; flex-direction:column; gap:8px;">
+          <div>
+            <label style="font-size:0.68rem; color:var(--text-muted);" data-i18n="companyNameLabel">اسم المشروع / الشركة</label>
+            <input type="text" id="settingCompanyName" class="input-field" value="FRESHLY & PREMIER">
+          </div>
+          <div>
+            <label style="font-size:0.68rem; color:var(--text-muted);" data-i18n="subtitleLabel">التصنيف الفرعي</label>
+            <input type="text" id="settingSubtitle" class="input-field" value="PREMIER BEVERIDGE CO">
+          </div>
+          <div>
+            <label style="font-size:0.68rem; color:var(--text-muted);" data-i18n="phoneLabel">أرقام التواصل</label>
+            <input type="text" id="settingPhones" class="input-field" value="01119843222 - 01507979090">
+          </div>
+          <button id="saveSettingsBtn" class="btn btn-gold" style="margin-top:4px;" data-i18n="saveSettingsBtn">💾 حفظ الإعدادات</button>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="nav-bar">
+      <button class="nav-btn active" data-tab="pos"><span class="icon">🧾</span><span data-i18n="tabPos">POS</span></button>
+      <button class="nav-btn" data-tab="pending"><span class="icon">🔔</span><span data-i18n="tabPending">المعلقة</span></button>
+      <button class="nav-btn" data-tab="reports"><span class="icon">📊</span><span data-i18n="tabReports">التقارير</span></button>
+<button class="nav-btn" data-tab="menu" onclick="window.location.href='index.html'"><span class="icon">📱</span><span data-i18n="tabMenu">المنيو</span></button>
+      <button class="nav-btn" data-tab="settings"><span class="icon">⚙️</span><span data-i18n="tabSettings">الإعدادات</span></button>
+    </nav>
+
+  </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const I18N = {
+    ar: {
+      searchPlaceholder: "ابحث عن مشروب أو صنف...",
+      allCategories: "الكل",
+      cartTitle: "الفاتورة الحالية",
+      customerPlaceholder: "العميل / الطاولة",
+      discountLabel: "الخصم (%)",
+      taxLabel: "الضريبة (%)",
+      saleDateLabel: "التاريخ",
+      grandTotalLabel: "الإجمالي النهائي:",
+      holdBtn: "تعليق",
+      payBtn: "إتمام ودفع",
+      pendingTitle: "الأوردرات المعلقة والواردة من المنيو",
+      reportsTitle: "التقارير اليومية والعهدة",
+      exchangeRateLabel: "سعر صرف اليورو (EUR to EGP):",
+      fromDateLabel: "من تاريخ",
+      toDateLabel: "إلى تاريخ",
+      periodAll: "📅 كل الأيام",
+      periodToday: "⭐ اليوم فقط",
+      period7Days: "⚡ آخر 7 أيام",
+      period30Days: "📊 آخر 30 يوم",
+      periodCustom: "🎯 مخصص (من - إلى)",
+      custodyBoxTitle: "إدارة العهدة اليومية للدرج",
+      custodyDate: "التاريخ",
+      custodyAmount: "المبلغ (EGP)",
+      saveBtn: "حفظ",
+      expensesBoxTitle: "تسجيل المصروفات اليومية",
+      expenseDate: "التاريخ",
+      expenseAmount: "المبلغ (EGP)",
+      expenseDesc: "البيان / السبب",
+      addExpenseBtn: "إضافة",
+      dailyBreakdownTitle: "ملخص الأيام المالي (كل يوم على حدة)",
+      thDate: "التاريخ",
+      thOrders: "الطلبات",
+      thCustody: "العهدية",
+      thExpenses: "المصروفات",
+      thSalesEgp: "إجمالي المبيعات (EGP)",
+      statCustody: "إجمالي العهدة",
+      statExpenses: "إجمالي المصروفات",
+      statSalesEgp: "إجمالي المبيعات",
+      statNetDrawer: "صافي الدرج والخزينة",
+      menuMgmtTitle: "إدارة الأصناف والأسعار",
+      settingsTitle: "إعدادات النظام والشركة",
+      companyNameLabel: "اسم المشروع / الشركة",
+      subtitleLabel: "التصنيف الفرعي",
+      phoneLabel: "أرقام التواصل",
+      saveSettingsBtn: "💾 حفظ الإعدادات",
+      tabPos: "POS",
+      tabPending: "المعلقة",
+      tabReports: "التقارير",
+      tabMenu: "المنيو",
+      tabSettings: "الإعدادات",
+      emptyCart: "الفاتورة فارغة",
+      alertOrderCompleted: "تم إتمام الدفع بنجاح وتسجيل المبيعات! ✅",
+      alertOrderHeld: "تم تعليق الفاتورة بنجاح ⏳",
+      alertExpenseAdded: "تم تسجيل المصروف بنجاح 💸",
+      grandRow: "الإجمالي العام"
+    },
+    en: {
+      searchPlaceholder: "Search drinks or items...",
+      allCategories: "All",
+      cartTitle: "Current Bill",
+      customerPlaceholder: "Customer / Table",
+      discountLabel: "Discount (%)",
+      taxLabel: "Tax (%)",
+      saleDateLabel: "Date",
+      grandTotalLabel: "Grand Total:",
+      holdBtn: "Hold",
+      payBtn: "Pay & Checkout",
+      pendingTitle: "Pending & Incoming Menu Orders",
+      reportsTitle: "Daily Reports & Custody",
+      exchangeRateLabel: "EUR to EGP Exchange Rate:",
+      fromDateLabel: "From Date",
+      toDateLabel: "To Date",
+      periodAll: "📅 All Days",
+      periodToday: "⭐ Today Only",
+      period7Days: "⚡ Last 7 Days",
+      period30Days: "📊 Last 30 Days",
+      periodCustom: "🎯 Custom Range",
+      custodyBoxTitle: "Daily Drawer Custody",
+      custodyDate: "Date",
+      custodyAmount: "Amount (EGP)",
+      saveBtn: "Save",
+      expensesBoxTitle: "Daily Expenses",
+      expenseDate: "Date",
+      expenseAmount: "Amount (EGP)",
+      expenseDesc: "Description",
+      addExpenseBtn: "Add",
+      dailyBreakdownTitle: "Daily Financial Summary",
+      thDate: "Date",
+      thOrders: "Orders",
+      thCustody: "Custody",
+      thExpenses: "Expenses",
+      thSalesEgp: "Total Sales (EGP)",
+      statCustody: "Total Custody",
+      statExpenses: "Total Expenses",
+      statSalesEgp: "Total Sales",
+      statNetDrawer: "Net Cash Drawer",
+      menuMgmtTitle: "Menu Items & Prices",
+      settingsTitle: "System & Company Settings",
+      companyNameLabel: "Company / Project Name",
+      subtitleLabel: "Subtitle",
+      phoneLabel: "Contact Phones",
+      saveSettingsBtn: "💾 Save Settings",
+      tabPos: "POS",
+      tabPending: "Pending",
+      tabReports: "Reports",
+      tabMenu: "Menu",
+      tabSettings: "Settings",
+      emptyCart: "Cart is empty",
+      alertOrderCompleted: "Checkout completed successfully! ✅",
+      alertOrderHeld: "Order placed on hold ⏳",
+      alertExpenseAdded: "Expense recorded successfully 💸",
+      grandRow: "Grand Total"
+    },
+    de: {
+      searchPlaceholder: "Suchen...",
+      allCategories: "Alle",
+      cartTitle: "Aktuelle Rechnung",
+      customerPlaceholder: "Kunde / Tisch",
+      discountLabel: "Rabatt (%)",
+      taxLabel: "Steuer (%)",
+      saleDateLabel: "Datum",
+      grandTotalLabel: "Gesamtsumme:",
+      holdBtn: "Halten",
+      payBtn: "Bezahlen",
+      pendingTitle: "Ausstehende Bestellungen",
+      reportsTitle: "Tagesberichte",
+      exchangeRateLabel: "EUR zu EGP Wechselkurs:",
+      fromDateLabel: "Von Datum",
+      toDateLabel: "Bis Datum",
+      periodAll: "📅 Alle Tage",
+      periodToday: "⭐ Nur Heute",
+      period7Days: "⚡ Letzte 7 Tage",
+      period30Days: "📊 Letzte 30 Tage",
+      periodCustom: "🎯 Benutzerdefiniert",
+      custodyBoxTitle: "Kassenbestand",
+      custodyDate: "Datum",
+      custodyAmount: "Betrag (EGP)",
+      saveBtn: "Speichern",
+      expensesBoxTitle: "Tägliche Ausgaben",
+      expenseDate: "Datum",
+      expenseAmount: "Betrag (EGP)",
+      expenseDesc: "Beschreibung",
+      addExpenseBtn: "Hinzufügen",
+      dailyBreakdownTitle: "Finanzübersicht",
+      thDate: "Datum",
+      thOrders: "Bestellungen",
+      thCustody: "Bestand",
+      thExpenses: "Ausgaben",
+      thSalesEgp: "Gesamtumsatz (EGP)",
+      statCustody: "Gesamtbestand",
+      statExpenses: "Gesamtausgaben",
+      statSalesEgp: "Gesamtumsatz",
+      statNetDrawer: "Netto Kasse",
+      menuMgmtTitle: "Menüverwaltung",
+      settingsTitle: "Einstellungen",
+      companyNameLabel: "Firmenname",
+      subtitleLabel: "Untertitel",
+      phoneLabel: "Telefon",
+      saveSettingsBtn: "💾 Speichern",
+      tabPos: "POS",
+      tabPending: "Wartend",
+      tabReports: "Berichte",
+      tabMenu: "Menü",
+      tabSettings: "Einstellungen",
+      emptyCart: "Warenkorb leer",
+      alertOrderCompleted: "Erfolgreich abgeschlossen! ✅",
+      alertOrderHeld: "Bestellung gehalten ⏳",
+      alertExpenseAdded: "Ausgabe gespeichert 💸",
+      grandRow: "Gesamtsumme"
+    },
+    fr: {
+      searchPlaceholder: "Rechercher...",
+      allCategories: "Tout",
+      cartTitle: "Facture Actuelle",
+      customerPlaceholder: "Client / Table",
+      discountLabel: "Remise (%)",
+      taxLabel: "Taxe (%)",
+      saleDateLabel: "Date",
+      grandTotalLabel: "Total général :",
+      holdBtn: "Attente",
+      payBtn: "Payer",
+      pendingTitle: "Commandes en attente",
+      reportsTitle: "Rapports",
+      exchangeRateLabel: "Taux de change EUR en EGP :",
+      fromDateLabel: "Date de début",
+      toDateLabel: "Date de fin",
+      periodAll: "📅 Tous les jours",
+      periodToday: "⭐ Aujourd'hui",
+      period7Days: "⚡ 7 derniers jours",
+      period30Days: "📊 30 derniers jours",
+      periodCustom: "🎯 Personnalisé",
+      custodyBoxTitle: "Fonds de Caisse",
+      custodyDate: "Date",
+      custodyAmount: "Montant (EGP)",
+      saveBtn: "Enregistrer",
+      expensesBoxTitle: "Dépenses Quotidiennes",
+      expenseDate: "Date",
+      expenseAmount: "Montant (EGP)",
+      expenseDesc: "Description",
+      addExpenseBtn: "Ajouter",
+      dailyBreakdownTitle: "Résumé Financier",
+      thDate: "Date",
+      thOrders: "Commandes",
+      thCustody: "Caisse",
+      thExpenses: "Dépenses",
+      thSalesEgp: "Ventes Totales (EGP)",
+      statCustody: "Total Caisse",
+      statExpenses: "Total Dépenses",
+      statSalesEgp: "Ventes Totales",
+      statNetDrawer: "Net en Caisse",
+      menuMgmtTitle: "Gestion du Menu",
+      settingsTitle: "Paramètres",
+      companyNameLabel: "Nom de l'entreprise",
+      subtitleLabel: "Sous-titre",
+      phoneLabel: "Téléphones",
+      saveSettingsBtn: "💾 Enregistrer",
+      tabPos: "POS",
+      tabPending: "Attente",
+      tabReports: "Rapports",
+      tabMenu: "Menu",
+      tabSettings: "Paramètres",
+      emptyCart: "Panier vide",
+      alertOrderCompleted: "Paiement réussi ! ✅",
+      alertOrderHeld: "Commande en attente ⏳",
+      alertExpenseAdded: "Dépense enregistrée 💸",
+      grandRow: "Total Général"
+    },
+    ru: {
+      searchPlaceholder: "Поиск...",
+      allCategories: "Все",
+      cartTitle: "Текущий счет",
+      customerPlaceholder: "Клиент / Стол",
+      discountLabel: "Скидка (%)",
+      taxLabel: "Налог (%)",
+      saleDateLabel: "Дата",
+      grandTotalLabel: "Итого:",
+      holdBtn: "Отложить",
+      payBtn: "Оплатить",
+      pendingTitle: "Ожидающие заказы",
+      reportsTitle: "Отчеты",
+      exchangeRateLabel: "Курс обмена EUR к EGP:",
+      fromDateLabel: "С даты",
+      toDateLabel: "По дату",
+      periodAll: "📅 Все дни",
+      periodToday: "⭐ Только сегодня",
+      period7Days: "⚡ Последние 7 дней",
+      period30Days: "📊 Последние 30 дней",
+      periodCustom: "🎯 Произвольный период",
+      custodyBoxTitle: "Кассовый остаток",
+      custodyDate: "Дата",
+      custodyAmount: "Сумма (EGP)",
+      saveBtn: "Сохранить",
+      expensesBoxTitle: "Ежедневные расходы",
+      expenseDate: "Дата",
+      expenseAmount: "Сумма (EGP)",
+      expenseDesc: "Описание",
+      addExpenseBtn: "Добавить",
+      dailyBreakdownTitle: "Финансовый отчет",
+      thDate: "Дата",
+      thOrders: "Заказы",
+      thCustody: "Остаток",
+      thExpenses: "Расходы",
+      thSalesEgp: "Общие продажи (EGP)",
+      statCustody: "Всего остаток",
+      statExpenses: "Всего расходы",
+      statSalesEgp: "Общие продажи",
+      statNetDrawer: "Чистая касса",
+      menuMgmtTitle: "Управление меню",
+      settingsTitle: "Настройки",
+      companyNameLabel: "Название компании",
+      subtitleLabel: "Подзаголовок",
+      phoneLabel: "Телефоны",
+      saveSettingsBtn: "💾 Сохранить",
+      tabPos: "POS",
+      tabPending: "Ожидание",
+      tabReports: "Отчеты",
+      tabMenu: "Меню",
+      tabSettings: "Настройки",
+      emptyCart: "Корзина пуста",
+      alertOrderCompleted: "Оплата прошла успешно! ✅",
+      alertOrderHeld: "Заказ отложен ⏳",
+      alertExpenseAdded: "Расход записан 💸",
+      grandRow: "Итого"
+    }
+  };
+
+  const DEFAULT_CATEGORIES = [
+    { id: 'milkshake', names: { ar: 'ميلك شيك', en: 'Milkshake', de: 'Milchshake', fr: 'Milkshake', ru: 'Милкшейк' } },
+    { id: 'iced_coffee', names: { ar: 'آيس كوفي', en: 'Iced Coffee', de: 'Eiskaffee', fr: 'Café Glacé', ru: 'Айс Кофе' } },
+    { id: 'fresh_juice', names: { ar: 'عصائر فريش', en: 'Fresh Juices', de: 'Frische Säfte', fr: 'Jus Frais', ru: 'Свежие соки' } },
+    { id: 'fruit_platters', names: { ar: 'اطباق فاكهة فريش', en: 'Fruit Platters', de: 'Obstteller', fr: 'Assiettes Fruits', ru: 'Фруктовые тарелки' } },
+    { id: 'matcha', names: { ar: 'الماتشا', en: 'Matcha', de: 'Matcha', fr: 'Matcha', ru: 'Матча' } },
+    { id: 'frappe', names: { ar: 'فرابيه', en: 'Frappe', de: 'Frappé', fr: 'Frappé', ru: 'Фраппе' } },
+    { id: 'iced_tea', names: { ar: 'آيس تي', en: 'Iced Tea', de: 'Eistee', fr: 'Thé Glacé', ru: 'Айс Ти' } },
+    { id: 'smoothie', names: { ar: 'سموزي', en: 'Smoothie', de: 'Smoothie', fr: 'Smoothie', ru: 'Смузи' } },
+    { id: 'mojito', names: { ar: 'موهيتو', en: 'Mojito', de: 'Mojito', fr: 'Mojito', ru: 'Мохито' } },
+    { id: 'hot_drinks', names: { ar: 'مشروبات ساخنة', en: 'Hot Drinks', de: 'Heißgetränke', fr: 'Boissons Chaudes', ru: 'Горячие напитки' } },
+    { id: 'soft_drinks', names: { ar: 'سوفت درينكس', en: 'Soft Drinks', de: 'Softdrinks', fr: 'Boissons Fraîches', ru: 'Напитки' } },
+    { id: 'asian_drinks', names: { ar: 'مشروبات آسيوية', en: 'Asian Drinks', de: 'Asiatisch', fr: 'Asiatique', ru: 'Азиатские напитки' } },
+    { id: 'energy', names: { ar: 'الطاقة والانتعاش', en: 'Energy & Refreshment', de: 'Energie', fr: 'Énergie', ru: 'Энергия' } }
+  ];
+
+  const DEFAULT_ITEMS = [
+    { id: 'm1', categoryId: 'milkshake', names: { ar: 'ميلك شيك مانجو فاخر', en: 'Mango Milkshake' }, priceEGP: 350, priceEUR: 7, special: true },
+    { id: 'm2', categoryId: 'milkshake', names: { ar: 'ميلك شيك فراولة', en: 'Strawberry Milkshake' }, priceEGP: 320, priceEUR: 6 },
+    { id: 'c1', categoryId: 'iced_coffee', names: { ar: 'آيس سبانيش لاتي', en: 'Iced Spanish Latte' }, priceEGP: 300, priceEUR: 6, special: true },
+    { id: 'c2', categoryId: 'iced_coffee', names: { ar: 'آيس كراميل ماكياتو', en: 'Iced Caramel Macchiato' }, priceEGP: 320, priceEUR: 6.5 },
+    { id: 'j1', categoryId: 'fresh_juice', names: { ar: 'عصير مانجو فريش', en: 'Fresh Mango Juice' }, priceEGP: 250, priceEUR: 5 },
+    { id: 'j2', categoryId: 'fresh_juice', names: { ar: 'عصير برتقال فريش', en: 'Fresh Orange Juice' }, priceEGP: 220, priceEUR: 4.5 },
+    { id: 'f1', categoryId: 'fruit_platters', names: { ar: 'طبق فواكه استوائية', en: 'Tropical Fruit Platter' }, priceEGP: 450, priceEUR: 9, special: true },
+    { id: 'mj1', categoryId: 'mojito', names: { ar: 'موهيتو بلو كوراكاو', en: 'Blue Curaçao Mojito' }, priceEGP: 280, priceEUR: 5.5 }
+  ];
+
+  function loadState() {
+    return {
+      lang: localStorage.getItem('fp_lang') || 'ar',
+      currency: localStorage.getItem('fp_currency') || 'EGP',
+      categories: JSON.parse(localStorage.getItem('fp_categories_v3') || JSON.stringify(DEFAULT_CATEGORIES)),
+      items: JSON.parse(localStorage.getItem('fp_items_v3') || JSON.stringify(DEFAULT_ITEMS)),
+      sales: JSON.parse(localStorage.getItem('fp_sales_v3') || '[]'),
+      pending: JSON.parse(localStorage.getItem('fp_pending') || '[]'),
+      held: JSON.parse(localStorage.getItem('fp_held_v3') || '[]'),
+      custodyByDate: JSON.parse(localStorage.getItem('fp_custody_v3') || JSON.stringify({ [todayStr]: 1000 })),
+      expensesByDate: JSON.parse(localStorage.getItem('fp_expenses_v3') || '{}'),
+      searchQuery: '',
+      selectedCat: 'all',
+      cart: []
+    };
+  }
+
+  let state = loadState();
+
+  function persistState() {
+    localStorage.setItem('fp_lang', state.lang);
+    localStorage.setItem('fp_currency', state.currency);
+    localStorage.setItem('fp_categories_v3', JSON.stringify(state.categories));
+    localStorage.setItem('fp_items_v3', JSON.stringify(state.items));
+    localStorage.setItem('fp_sales_v3', JSON.stringify(state.sales));
+    localStorage.setItem('fp_pending', JSON.stringify(state.pending));
+    localStorage.setItem('fp_held_v3', JSON.stringify(state.held));
+    localStorage.setItem('fp_custody_v3', JSON.stringify(state.custodyByDate));
+    localStorage.setItem('fp_expenses_v3', JSON.stringify(state.expensesByDate));
+  }
+
+  function t(key) {
+    return (I18N[state.lang] && I18N[state.lang][key]) || I18N.ar[key] || key;
+  }
+
+  function applyTranslations() {
+    const isRtl = state.lang === 'ar';
+    document.documentElement.lang = state.lang;
+    document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const k = el.getAttribute('data-i18n');
+      if (t(k)) el.textContent = t(k);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      const k = el.getAttribute('data-i18n-placeholder');
+      if (t(k)) el.placeholder = t(k);
+    });
+  }
+
+  function formatMoney(amount) {
+    const num = Number(amount || 0);
+    const clean = Number.isInteger(num) ? num.toString() : num.toFixed(2);
+    return state.currency === 'EGP' ? `${clean} EGP` : `${clean} €`;
+  }
+
+  function getItemTitle(item) {
+    if (!item) return '';
+    if (item.names) return item.names[state.lang] || item.names.ar || item.names.en || '';
+    return item.name || '';
+  }
+
+  function getCatTitle(cat) {
+    if (!cat) return '';
+    if (cat.names) return cat.names[state.lang] || cat.names.ar || cat.names.en || '';
+    return cat.name || '';
+  }
+
+  function getUnitPrice(item) {
+    if (!item) return 0;
+    return state.currency === 'EGP' ? Number(item.priceEGP || 300) : Number(item.priceEUR || 5);
+  }
+
+  function makeDrinkImage(label, accent = '#d4af37') {
+    const clean = String(label || 'Drink').replace(/[<>&'"]/g, '').substring(0, 18);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="140" viewBox="0 0 220 140">
+      <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e2433"/><stop offset="100%" stop-color="#0f1219"/></linearGradient></defs>
+      <rect width="220" height="140" fill="url(#bg)"/>
+      <circle cx="110" cy="54" r="32" fill="${accent}" opacity="0.18"/>
+      <path d="M94 34 L126 34 L121 76 L99 76 Z" fill="${accent}" opacity="0.35" stroke="${accent}" stroke-width="2.5"/>
+      <path d="M110 34 L117 18 L128 15" fill="none" stroke="${accent}" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="110" cy="34" rx="16" ry="3.5" fill="${accent}" opacity="0.7"/>
+      <text x="110" y="112" fill="#f8fafc" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle">${clean}</text>
+    </svg>`;
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+  }
+
+  function renderCategoryStrip() {
+    const strip = document.getElementById('posCategoryStrip');
+    let html = `<button class="cat-chip ${state.selectedCat === 'all' ? 'active' : ''}" data-cat="all">${t('allCategories')}</button>`;
+    state.categories.forEach(c => {
+      html += `<button class="cat-chip ${state.selectedCat === c.id ? 'active' : ''}" data-cat="${c.id}">${getCatTitle(c)}</button>`;
+    });
+    strip.innerHTML = html;
+
+    strip.querySelectorAll('.cat-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.selectedCat = btn.getAttribute('data-cat');
+        renderCategoryStrip();
+        renderPosItems();
+      });
+    });
+  }
+
+  function renderPosItems() {
+    const grid = document.getElementById('posItemsGrid');
+    const q = state.searchQuery.trim().toLowerCase();
+    const filtered = state.items.filter(item => {
+      const matchCat = state.selectedCat === 'all' || item.categoryId === state.selectedCat;
+      const title = getItemTitle(item).toLowerCase();
+      const matchQ = !q || title.includes(q);
+      return matchCat && matchQ;
+    });
+
+    grid.innerHTML = filtered.map(item => `
+      <div class="item-card ${item.special ? 'special-item' : ''}" data-id="${item.id}">
+        ${item.special ? `<span class="special-ribbon">★ مميز</span>` : ''}
+        <div class="item-thumb"><img src="${item.image || makeDrinkImage(getItemTitle(item))}" alt=""></div>
+        <div class="item-name">${getItemTitle(item)}</div>
+        <div class="item-price-tag">${formatMoney(getUnitPrice(item))}</div>
+      </div>
+    `).join('');
+
+    grid.querySelectorAll('.item-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = card.getAttribute('data-id');
+        const ex = state.cart.find(c => c.itemId === id);
+        if (ex) ex.qty += 1;
+        else state.cart.push({ itemId: id, qty: 1 });
+        renderCart();
+      });
+    });
+  }
+
+  function renderCart() {
+    const list = document.getElementById('cartItemsList');
+    if (state.cart.length === 0) {
+      list.innerHTML = `<div class="cart-empty">${t('emptyCart')}</div>`;
+      document.getElementById('grandTotalDisplay').textContent = formatMoney(0);
+      return;
+    }
+
+    let subtotal = 0;
+    list.innerHTML = state.cart.map(c => {
+      const item = state.items.find(i => i.id === c.itemId);
+      if (!item) return '';
+      const unit = getUnitPrice(item);
+      subtotal += unit * c.qty;
+      return `
+        <div class="cart-row">
+          <span style="font-weight:700;">${getItemTitle(item)}</span>
+          <div style="display:flex; align-items:center; gap:5px;">
+            <span style="color:var(--gold-main); font-weight:800;">${formatMoney(unit * c.qty)}</span>
+            <button class="qty-btn" data-act="dec" data-id="${c.itemId}">-</button>
+            <span style="font-weight:800; min-width:14px; text-align:center;">${c.qty}</span>
+            <button class="qty-btn" data-act="inc" data-id="${c.itemId}">+</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    list.querySelectorAll('.qty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const act = btn.getAttribute('data-act');
+        const idx = state.cart.findIndex(x => x.itemId === id);
+        if (idx === -1) return;
+        if (act === 'inc') state.cart[idx].qty++;
+        else {
+          state.cart[idx].qty--;
+          if (state.cart[idx].qty <= 0) state.cart.splice(idx, 1);
+        }
+        renderCart();
+      });
+    });
+
+    const discPct = Math.max(0, Math.min(100, Number(document.getElementById('discountInput').value || 0)));
+    const taxPct = document.getElementById('hideTaxCheckbox').checked ? 0 : Math.max(0, Math.min(100, Number(document.getElementById('taxInput').value || 0)));
+
+    const afterDisc = subtotal * (1 - discPct / 100);
+    const finalTotal = afterDisc * (1 + taxPct / 100);
+
+    document.getElementById('grandTotalDisplay').textContent = formatMoney(finalTotal);
+  }
+
+  // Checkout Action
+  document.getElementById('checkoutBtn').addEventListener('click', () => {
+    if (state.cart.length === 0) return alert(t('emptyCart'));
+    const customer = document.getElementById('customerNameInput').value.trim() || 'كاشير عام';
+    const saleDate = document.getElementById('saleDateInput').value || todayStr;
+    
+    let subtotal = 0;
+    const cartMapped = state.cart.map(c => {
+      const it = state.items.find(i => i.id === c.itemId);
+      const unit = getUnitPrice(it);
+      subtotal += unit * c.qty;
+      return { itemId: c.itemId, qty: c.qty };
+    });
+
+    const discPct = Number(document.getElementById('discountInput').value || 0);
+    const taxPct = document.getElementById('hideTaxCheckbox').checked ? 0 : Number(document.getElementById('taxInput').value || 0);
+    const afterDisc = subtotal * (1 - discPct / 100);
+    const finalTotal = afterDisc * (1 + taxPct / 100);
+
+    const saleRecord = {
+      id: 'SALE-' + Math.floor(1000 + Math.random() * 9000),
+      customer,
+      date: saleDate,
+      currency: state.currency,
+      cart: cartMapped,
+      total: finalTotal
+    };
+
+    state.sales.unshift(saleRecord);
+    persistState();
+    alert(t('alertOrderCompleted'));
+    state.cart = [];
+    document.getElementById('customerNameInput').value = '';
+    renderCart();
+    renderReports();
+  });
+
+  // Hold Order Action
+  document.getElementById('holdOrderBtn').addEventListener('click', () => {
+    if (state.cart.length === 0) return alert(t('emptyCart'));
+    const customer = document.getElementById('customerNameInput').value.trim() || 'معلق';
+    const saleDate = document.getElementById('saleDateInput').value || todayStr;
+
+    state.held.unshift({
+      id: 'HELD-' + Math.floor(100 + Math.random() * 900),
+      customer,
+      date: saleDate,
+      currency: state.currency,
+      cart: [...state.cart]
+    });
+    persistState();
+    alert(t('alertOrderHeld'));
+    state.cart = [];
+    renderCart();
+    renderPendingOrders();
+  });
+
+  // Render Pending / Incoming / Held Orders
+  function renderPendingOrders() {
+    const container = document.getElementById('pendingOrdersList');
+    const allOrders = [...state.pending, ...state.held];
+
+    if (allOrders.length === 0) {
+      container.innerHTML = `<div class="cart-empty">لا توجد أوردرات معلقة حالياً</div>`;
+      return;
+    }
+
+    container.innerHTML = allOrders.map((ord, idx) => `
+      <div class="panel-box" style="display:flex; justify-content:space-between; align-items:center; padding:8px;">
+        <div>
+          <div style="font-weight:800; color:var(--gold-main); font-size:0.8rem;">${ord.customer} (${ord.id})</div>
+          <div style="font-size:0.68rem; color:var(--text-muted);">${ord.date} — إجمالي: ${formatMoney(ord.total || 0)}</div>
+        </div>
+        <div style="display:flex; gap:5px;">
+          <button class="btn btn-gold" style="padding:5px 8px; font-size:0.7rem;" onclick="processOrder('${ord.id}')">إتمام</button>
+          <button class="btn btn-danger" style="padding:5px 8px; font-size:0.7rem;" onclick="removeOrder('${ord.id}')">حذف</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.processOrder = function(id) {
+    let ord = state.pending.find(o => o.id === id);
+    let isPending = true;
+    if (!ord) {
+      ord = state.held.find(o => o.id === id);
+      isPending = false;
+    }
+    if (!ord) return;
+
+    state.sales.unshift({
+      id: 'SALE-' + Math.floor(1000 + Math.random() * 9000),
+      customer: ord.customer,
+      date: ord.date || todayStr,
+      currency: ord.currency || state.currency,
+      cart: ord.cart,
+      total: ord.total || 0
+    });
+
+    if (isPending) state.pending = state.pending.filter(o => o.id !== id);
+    else state.held = state.held.filter(o => o.id !== id);
+
+    persistState();
+    renderPendingOrders();
+    renderReports();
+    alert('تم اعتماد الأوردر بنجاح! ✅');
+  }
+
+  window.removeOrder = function(id) {
+    state.pending = state.pending.filter(o => o.id !== id);
+    state.held = state.held.filter(o => o.id !== id);
+    persistState();
+    renderPendingOrders();
+  }
+
+  // Reports & Expenses with Custom Date Range Filter
+  function renderReports() {
+    const period = document.getElementById('reportPeriodSelect').value;
+    const exchangeRate = Number(document.getElementById('exchangeRateInput').value || 55);
+    const customBox = document.getElementById('customDateRangeBox');
+    const now = new Date();
+    
+    // Show/hide custom date range box
+    if (period === 'custom') {
+      customBox.style.display = 'grid';
+    } else {
+      customBox.style.display = 'none';
+    }
+
+    const dateSet = new Set();
+    state.sales.forEach(s => dateSet.add(s.date));
+    Object.keys(state.custodyByDate).forEach(d => dateSet.add(d));
+    Object.keys(state.expensesByDate).forEach(d => dateSet.add(d));
+    
+    let dates = Array.from(dateSet).sort().reverse();
+
+    if (period === 'today') {
+      dates = dates.filter(d => d === todayStr);
+    } else if (period === '7days') {
+      const limitDate = new Date();
+      limitDate.setDate(now.getDate() - 7);
+      dates = dates.filter(d => new Date(d) >= limitDate);
+    } else if (period === '30days') {
+      const limitDate = new Date();
+      limitDate.setDate(now.getDate() - 30);
+      dates = dates.filter(d => new Date(d) >= limitDate);
+    } else if (period === 'custom') {
+      const startDate = document.getElementById('customStartDate').value;
+      const endDate = document.getElementById('customEndDate').value;
+      if (startDate) {
+        dates = dates.filter(d => d >= startDate);
+      }
+      if (endDate) {
+        dates = dates.filter(d => d <= endDate);
+      }
+    }
+
+    let sumCustody = 0;
+    let sumExpenses = 0;
+    let sumTotalEgp = 0;
+    let totalOrdersCount = 0;
+
+    const tbody = document.getElementById('dailyBreakdownBody');
+    tbody.innerHTML = dates.map(d => {
+      const daySales = state.sales.filter(s => s.date === d);
+      
+      const dayEgpDirect = daySales.filter(s => s.currency === 'EGP').reduce((a, b) => a + Number(b.total), 0);
+      const dayEurConverted = daySales.filter(s => s.currency === 'EUR').reduce((a, b) => a + (Number(b.total) * exchangeRate), 0);
+      const dayTotalEgp = dayEgpDirect + dayEurConverted;
+
+      const cust = Number(state.custodyByDate[d] || 0);
+      const expList = state.expensesByDate[d] || [];
+      const dayExp = expList.reduce((a, b) => a + Number(b.amount), 0);
+
+      sumCustody += cust;
+      sumExpenses += dayExp;
+      sumTotalEgp += dayTotalEgp;
+      totalOrdersCount += daySales.length;
+
+      return `
+        <tr>
+          <td style="font-weight:700;">${d}</td>
+          <td>${daySales.length}</td>
+          <td>${cust}</td>
+          <td style="color:var(--danger); font-weight:800;">${dayExp}</td>
+          <td style="color:var(--gold-main); font-weight:800;">${dayTotalEgp.toFixed(2)} EGP</td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('dailyBreakdownFoot').innerHTML = `
+      <tr style="background:rgba(212,175,55,0.16); font-weight:900;">
+        <td>${t('grandRow')}</td>
+        <td>${totalOrdersCount}</td>
+        <td>${sumCustody}</td>
+        <td style="color:var(--danger);">${sumExpenses} EGP</td>
+        <td style="color:var(--gold-main);">${sumTotalEgp.toFixed(2)} EGP</td>
+      </tr>
+    `;
+
+    document.getElementById('statTotalCustodyVal').textContent = `${sumCustody} EGP`;
+    document.getElementById('statTotalExpensesVal').textContent = `${sumExpenses} EGP`;
+    document.getElementById('statTotalSalesEgpVal').textContent = `${sumTotalEgp.toFixed(2)} EGP`;
+    document.getElementById('statNetDrawerVal').textContent = `${(sumCustody + sumTotalEgp - sumExpenses).toFixed(2)} EGP`;
+  }
+
+  document.getElementById('reportPeriodSelect').addEventListener('change', renderReports);
+  document.getElementById('exchangeRateInput').addEventListener('input', renderReports);
+  document.getElementById('customStartDate').addEventListener('change', renderReports);
+  document.getElementById('customEndDate').addEventListener('change', renderReports);
+
+  // Set default custom dates to today
+  document.getElementById('customStartDate').value = todayStr;
+  document.getElementById('customEndDate').value = todayStr;
+
+  document.getElementById('saveCustodyBtn').addEventListener('click', () => {
+    const d = document.getElementById('custodyDateInput').value || todayStr;
+    state.custodyByDate[d] = Number(document.getElementById('custodyAmountInput').value || 0);
+    persistState();
+    renderReports();
+    alert('تم حفظ العهدة بنجاح ✅');
+  });
+
+  document.getElementById('addExpenseBtn').addEventListener('click', () => {
+    const d = document.getElementById('expenseDateInput').value || todayStr;
+    const amount = Number(document.getElementById('expenseAmountInput').value || 0);
+    const desc = document.getElementById('expenseDescInput').value.trim() || 'مصروف عام';
+    if (amount <= 0) return alert('يرجى إدخال مبلغ صحيح');
+
+    if (!state.expensesByDate[d]) state.expensesByDate[d] = [];
+    state.expensesByDate[d].push({ amount, desc });
+    persistState();
+    renderReports();
+    document.getElementById('expenseAmountInput').value = '';
+    document.getElementById('expenseDescInput').value = '';
+    alert(t('alertExpenseAdded'));
+  });
+
+  // Settings & Navigation
+  function switchTab(name) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === name));
+    document.querySelectorAll('.view-section').forEach(s => s.classList.toggle('active', s.id === `view-${name}`));
+    if (name === 'reports') renderReports();
+    if (name === 'pending') renderPendingOrders();
+  }
+
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const tab = btn.getAttribute('data-tab');
+    if (tab !== 'menu') {
+      btn.addEventListener('click', () => switchTab(tab));
+    }
+  });
+
+  document.getElementById('langSelect').value = state.lang;
+  document.getElementById('langSelect').addEventListener('change', e => {
+    state.lang = e.target.value;
+    persistState();
+    applyTranslations();
+    renderCategoryStrip();
+    renderPosItems();
+    renderCart();
+    renderReports();
+  });
+
+  document.getElementById('currencySelect').value = state.currency;
+  document.getElementById('currencySelect').addEventListener('change', e => {
+    state.currency = e.target.value;
+    persistState();
+    renderPosItems();
+    renderCart();
+  });
+
+  document.getElementById('posSearchInput').addEventListener('input', e => {
+    state.searchQuery = e.target.value;
+    renderPosItems();
+  });
+
+  document.getElementById('discountInput').addEventListener('input', renderCart);
+  document.getElementById('taxInput').addEventListener('input', renderCart);
+  document.getElementById('hideTaxCheckbox').addEventListener('change', renderCart);
+
+  document.getElementById('saleDateInput').value = todayStr;
+  document.getElementById('custodyDateInput').value = todayStr;
+  document.getElementById('expenseDateInput').value = todayStr;
+  document.getElementById('custodyAmountInput').value = state.custodyByDate[todayStr] ?? 1000;
+
+  document.getElementById('printReportBtn').addEventListener('click', () => window.print());
+
+  applyTranslations();
+  renderCategoryStrip();
+  renderPosItems();
+  renderCart();
+  renderReports();
+});
+</script>
+</body>
+</html>
